@@ -11,7 +11,14 @@ export async function generate(contents: Content[], voiceReply=false) {
     const ai = new GoogleGenAI({apiKey:key});
     const response = await ai.models.generateContent({model:config().model, contents, config:{systemInstruction:voiceReply?'Reply helpfully in the user’s language. Keep the spoken response under 500 characters.':'Reply helpfully and concisely in the user’s language.',maxOutputTokens:voiceReply?180:1024,temperature:0.7},});
     const reply = response.text?.trim();
-    if (!reply || (voiceReply && reply.length>600)) return error('AI_SERVICE_UNAVAILABLE',502);
+    if (!reply) {
+      const reason=response.candidates?.[0]?.finishReason;
+      console.error('Gemini returned no text',{finishReason:reason??null,outputTokens:response.usageMetadata?.candidatesTokenCount??null,thoughtTokens:response.usageMetadata?.thoughtsTokenCount??null});
+      const failure=error('AI_SERVICE_UNAVAILABLE',502);
+      if(typeof reason==='string' && /^[A-Z_]{2,40}$/.test(reason))failure.headers.set('X-Convico-Finish-Reason',reason);
+      return failure;
+    }
+    if (voiceReply && reply.length>600) return error('AI_SERVICE_UNAVAILABLE',502);
     return Response.json({reply});
   } catch (cause) {
     const e = cause as {status?:number;message?:string};

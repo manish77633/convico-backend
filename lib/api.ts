@@ -13,6 +13,7 @@ const messages: Record<ApiCode, string> = {
 };
 export function error(code: ApiCode, status: number, retryAfterSeconds?: number) {
   const response = NextResponse.json({error: {code, message: messages[code], ...(retryAfterSeconds ? {retryAfterSeconds} : {})}}, {status});
+  response.headers.set('X-Convico-Diagnostics','v2');
   if (retryAfterSeconds) response.headers.set('Retry-After', String(retryAfterSeconds));
   return response;
 }
