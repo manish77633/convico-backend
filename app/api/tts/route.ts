@@ -45,9 +45,9 @@ export async function POST(request:NextRequest) {
     return new Response(new Uint8Array(audio),{headers:{'Content-Type':'audio/wav','Content-Length':String(audio.length),'Cache-Control':'no-store'}});
   }catch(cause){
     const e=cause as {status?:number;message?:string};
-    console.error('Gemini TTS failed',{status:e.status??null});
+    console.error('Gemini TTS failed',{status:e.status??null,name:cause instanceof Error?cause.name:null});
     if(e.status===429||/quota|resource.exhausted/i.test(e.message||'')){await tripProviderQuota('tts');return error('PROVIDER_QUOTA_EXCEEDED',429);}
     if(/timeout|abort/i.test(e.message||''))return error('REQUEST_TIMEOUT',504);
-    return error('AI_SERVICE_UNAVAILABLE',e.status===401||e.status===403?503:502);
+    return error(e.status===401||e.status===403?'AI_ACCESS_DENIED':e.status===404?'AI_MODEL_UNAVAILABLE':'AI_SERVICE_UNAVAILABLE',e.status===401||e.status===403||e.status===404?503:502);
   }finally{if(hash)await release(hash);}
 }

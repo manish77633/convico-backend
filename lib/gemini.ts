@@ -13,8 +13,10 @@ export async function generate(contents: Content[], voiceReply=false) {
     const reply = response.text?.trim();
     if (!reply) {
       const reason=response.candidates?.[0]?.finishReason;
-      console.error('Gemini returned no text',{finishReason:reason??null,outputTokens:response.usageMetadata?.candidatesTokenCount??null,thoughtTokens:response.usageMetadata?.thoughtsTokenCount??null});
-      const failure=error('AI_SERVICE_UNAVAILABLE',502);
+      const block=response.promptFeedback?.blockReason;
+      console.error('Gemini returned no text',{finishReason:reason??null,blockReason:block??null,outputTokens:response.usageMetadata?.candidatesTokenCount??null,thoughtTokens:response.usageMetadata?.thoughtsTokenCount??null});
+      const blocked=Boolean(block)||['SAFETY','BLOCKLIST','PROHIBITED_CONTENT','SPII'].includes(String(reason));
+      const failure=error(blocked?'AI_RESPONSE_BLOCKED':reason==='MAX_TOKENS'?'AI_RESPONSE_INCOMPLETE':'AI_EMPTY_RESPONSE',blocked?422:502);
       if(typeof reason==='string' && /^[A-Z_]{2,40}$/.test(reason))failure.headers.set('X-Convico-Finish-Reason',reason);
       return failure;
     }
@@ -22,10 +24,11 @@ export async function generate(contents: Content[], voiceReply=false) {
     return Response.json({reply});
   } catch (cause) {
     const e = cause as {status?:number;message?:string};
-    console.error('Gemini generation failed', {status:e.status ?? null});
+    console.error('Gemini generation failed', {status:e.status ?? null,name:cause instanceof Error?cause.name:null});
     if (e.status === 429 || /quota|resource.exhausted/i.test(e.message || '')) { await tripProviderQuota(); return error('PROVIDER_QUOTA_EXCEEDED',429); }
     if (/timeout|abort/i.test(e.message || '')) return error('REQUEST_TIMEOUT',504);
-    const failure=error('AI_SERVICE_UNAVAILABLE',e.status===401||e.status===403?503:502);
+    const code=e.status===401||e.status===403?'AI_ACCESS_DENIED':e.status===404?'AI_MODEL_UNAVAILABLE':'AI_SERVICE_UNAVAILABLE';
+    const failure=error(code,code==='AI_SERVICE_UNAVAILABLE'?502:503);
     if(Number.isInteger(e.status))failure.headers.set('X-Convico-Upstream-Status',String(e.status));
     return failure;
   }

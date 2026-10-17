@@ -23,3 +23,5 @@ Vercel Functions currently cap request and response payloads at 4.5 MB. This bac
 No secrets belong in Git history. `.env.local` and other `.env` files are ignored; `.env.example` contains placeholders only.
 
 If `/api/chat` returns `AI_SERVICE_UNAVAILABLE`, check the Vercel Function log entry `Gemini generation failed` for the upstream HTTP status. `401` or `403` usually means the configured key or project access needs attention; `400` can indicate an invalid model or request. The backend intentionally logs no key, prompt, or audio. Confirm `GEMINI_API_KEY` and `GEMINI_MODEL` in Vercel and redeploy after changing them. A working backend must return a real `{reply}` to a valid chat request; a successful Next.js build alone does not prove provider access.
+
+Gemini provider failures, missing model access, quota exhaustion, blocked output, incomplete output, and empty output have separate safe error codes. Vercel logs contain only upstream status, error class, finish reason, block reason, and aggregate output token counts. The `X-Convico-Diagnostics` response header identifies the deployed diagnostic code; it does not indicate that Gemini itself is available.
