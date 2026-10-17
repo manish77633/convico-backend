@@ -7,7 +7,7 @@ function numberEnv(name: string, fallback: number, min: number, max: number) {
 
 export function config() {
   return {
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
     perIp: numberEnv('LIMIT_REQUESTS_PER_IP', 30, 1, 100),
     windowSeconds: numberEnv('LIMIT_WINDOW_SECONDS', 60, 60, 86400),
     daily: numberEnv('LIMIT_DAILY_REQUESTS', 200, 1, 100000),
