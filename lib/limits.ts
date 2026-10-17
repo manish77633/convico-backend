@@ -40,6 +40,6 @@ export async function release(hash: string) {
   try { await redis(['EVAL',"local n=tonumber(redis.call('GET',KEYS[1]) or '0'); if n>0 then redis.call('DECR',KEYS[1]) end; return 1",1,`convico:active:${hash}`]); } catch { /* 90-second TTL releases a stale slot. */ }
 }
 export async function tripProviderQuota() {
-  try { await redis(['SET','convico:provider-quota','1','EX',3600]); } catch { /* Redis failure already fails closed on next reservation. */ }
+  try { await redis(['SET','convico:provider-quota','1']); } catch { /* Redis failure already fails closed on next reservation. */ }
 }
 export async function providerQuotaTripped() { return Boolean(await redis(['GET','convico:provider-quota'])); }
