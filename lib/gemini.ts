@@ -18,6 +18,8 @@ export async function generate(contents: Content[], voiceReply=false) {
     console.error('Gemini generation failed', {status:e.status ?? null});
     if (e.status === 429 || /quota|resource.exhausted/i.test(e.message || '')) { await tripProviderQuota(); return error('PROVIDER_QUOTA_EXCEEDED',429); }
     if (/timeout|abort/i.test(e.message || '')) return error('REQUEST_TIMEOUT',504);
-    return error('AI_SERVICE_UNAVAILABLE',e.status===401||e.status===403?503:502);
+    const failure=error('AI_SERVICE_UNAVAILABLE',e.status===401||e.status===403?503:502);
+    if(Number.isInteger(e.status))failure.headers.set('X-Convico-Upstream-Status',String(e.status));
+    return failure;
   }
 }
