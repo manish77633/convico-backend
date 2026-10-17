@@ -6,15 +6,12 @@ import { createHash } from 'crypto';
 const script = `
 local existing = redis.call('SET', KEYS[1], '1', 'NX', 'EX', 86400)
 if not existing then return {3, 0} end
-local daily = tonumber(redis.call('GET', KEYS[3]) or '0')
-if daily >= tonumber(ARGV[2]) then redis.call('DEL', KEYS[1]); return {2, redis.call('TTL', KEYS[3])} end
 local rate = tonumber(redis.call('GET', KEYS[2]) or '0')
 if rate >= tonumber(ARGV[1]) then redis.call('DEL', KEYS[1]); return {1, redis.call('TTL', KEYS[2])} end
-local active = tonumber(redis.call('GET', KEYS[4]) or '0')
-if active >= tonumber(ARGV[3]) then redis.call('DEL', KEYS[1]); return {1, redis.call('TTL', KEYS[4])} end
-redis.call('INCR', KEYS[2]); if rate == 0 then redis.call('EXPIRE', KEYS[2], ARGV[4]) end
-redis.call('INCR', KEYS[3]); if daily == 0 then redis.call('EXPIRE', KEYS[3], 86400) end
-redis.call('INCR', KEYS[4]); redis.call('EXPIRE', KEYS[4], 90)
+local active = tonumber(redis.call('GET', KEYS[3]) or '0')
+if active >= tonumber(ARGV[2]) then redis.call('DEL', KEYS[1]); return {1, redis.call('TTL', KEYS[3])} end
+redis.call('INCR', KEYS[2]); if rate == 0 then redis.call('EXPIRE', KEYS[2], ARGV[3]) end
+redis.call('INCR', KEYS[3]); redis.call('EXPIRE', KEYS[3], 90)
 return {0, 0}
 `;
 async function redis(command: unknown[]) {
@@ -32,8 +29,7 @@ export async function reserve(request: NextRequest, requestId: string) {
   if (!ip || !/^[a-zA-Z0-9:._-]{3,80}$/.test(ip) || !/^[a-f0-9-]{36}$/i.test(requestId)) throw new Error('Identity unavailable');
   const hash = createHash('sha256').update(ip).digest('hex');
   const c = config();
-  const daily = Math.max(1, Math.floor(c.daily*c.safetyPercent/100));
-  const result = await redis(['EVAL',script,4,`convico:req:${hash}:${requestId}`,`convico:rate:${hash}`, 'convico:daily',`convico:active:${hash}`,c.perIp,daily,c.concurrent,c.windowSeconds]);
+  const result = await redis(['EVAL',script,3,`convico:req:${hash}:${requestId}`,`convico:rate:v2:${hash}`,`convico:active:${hash}`,c.perIp,c.concurrent,c.windowSeconds]);
   return {code:Number(result[0]), retryAfterSeconds:Math.max(1,Number(result[1]) || 60), hash};
 }
 export async function release(hash: string) {

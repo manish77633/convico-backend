@@ -30,7 +30,6 @@ export async function POST(request:NextRequest) {
     if(await providerQuotaTripped('tts'))return error('PROVIDER_QUOTA_EXCEEDED',429);
     const slot=await reserve(request,requestId);
     if(slot.code===1)return error('RATE_LIMITED',429,slot.retryAfterSeconds);
-    if(slot.code===2)return error('APP_USAGE_LIMIT_REACHED',429,slot.retryAfterSeconds);
     if(slot.code===3)return error('RATE_LIMITED',409);
     hash=slot.hash;
     const key=process.env.GEMINI_API_KEY;

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { config } from './config';
 
-export type ApiCode = 'RATE_LIMITED'|'APP_USAGE_LIMIT_REACHED'|'PROVIDER_QUOTA_EXCEEDED'|'MESSAGE_TOO_LONG'|'AUDIO_TOO_LARGE'|'REQUEST_TIMEOUT'|'AI_SERVICE_UNAVAILABLE'|'AI_ACCESS_DENIED'|'AI_MODEL_UNAVAILABLE'|'AI_RESPONSE_BLOCKED'|'AI_EMPTY_RESPONSE'|'AI_RESPONSE_INCOMPLETE'|'INVALID_REQUEST';
+export type ApiCode = 'RATE_LIMITED'|'PROVIDER_QUOTA_EXCEEDED'|'MESSAGE_TOO_LONG'|'AUDIO_TOO_LARGE'|'REQUEST_TIMEOUT'|'AI_SERVICE_UNAVAILABLE'|'AI_ACCESS_DENIED'|'AI_MODEL_UNAVAILABLE'|'AI_RESPONSE_BLOCKED'|'AI_EMPTY_RESPONSE'|'AI_RESPONSE_INCOMPLETE'|'INVALID_REQUEST';
 const messages: Record<ApiCode, string> = {
-  RATE_LIMITED: "You're sending messages too quickly. Please wait a moment before trying again.",
-  APP_USAGE_LIMIT_REACHED: "You've reached the current chat usage limit. Please try again later.",
+  RATE_LIMITED: "Too many AI requests from this connection. Please retry after the indicated delay.",
   PROVIDER_QUOTA_EXCEEDED: 'AI usage limit reached. Please try again when your quota is available.',
   MESSAGE_TOO_LONG: 'Message is too long.', AUDIO_TOO_LARGE: 'Audio recording is too large.',
   REQUEST_TIMEOUT: 'AI took too long. Please retry when ready.',
