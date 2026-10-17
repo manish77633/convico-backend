@@ -2,10 +2,12 @@ import { NextRequest } from 'next/server';
 import { error, history, originAllowed } from './api';
 import { config } from './config';
 import { generate, type Content } from './gemini';
+import { voiceToken } from './voice-token';
 import { providerQuotaTripped, release, reserve } from './limits';
 
 export async function handle(request: NextRequest, kind:'chat'|'voice') {
   if (!originAllowed(request)) return error('INVALID_REQUEST',403);
+  if (kind==='voice' && (!process.env.TTS_SIGNING_SECRET || process.env.TTS_SIGNING_SECRET.length<32)) return error('AI_SERVICE_UNAVAILABLE',503);
   const c = config();
   const maxBody = kind === 'voice' ? c.audioBytes + 50000 : 60000;
   const length = Number(request.headers.get('content-length') || 0);
@@ -43,7 +45,10 @@ export async function handle(request: NextRequest, kind:'chat'|'voice') {
     if (slot.code === 2) return error('APP_USAGE_LIMIT_REACHED',429,slot.retryAfterSeconds);
     if (slot.code === 3) return error('RATE_LIMITED',409);
     hash = slot.hash;
-    return await generate(contents);
+    const generated = await generate(contents,kind==='voice');
+    if (kind !== 'voice' || !generated.ok) return generated;
+    const body = await generated.json() as {reply:string};
+    return Response.json({reply:body.reply,audioToken:voiceToken(body.reply)});
   } catch { return error('AI_SERVICE_UNAVAILABLE',503); }
   finally { if (hash) await release(hash); }
 }
