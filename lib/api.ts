@@ -17,7 +17,10 @@ const messages: Record<ApiCode, string> = {
 };
 export function error(code: ApiCode, status: number, retryAfterSeconds?: number) {
   const response = NextResponse.json({error: {code, message: messages[code], ...(retryAfterSeconds ? {retryAfterSeconds} : {})}}, {status});
-  response.headers.set('X-Convico-Diagnostics','v3');
+  response.headers.set('X-Convico-Diagnostics','v4');
+  const limits = config();
+  response.headers.set('X-RateLimit-Limit', String(limits.perIp));
+  response.headers.set('X-RateLimit-Window', String(limits.windowSeconds));
   if (retryAfterSeconds) response.headers.set('Retry-After', String(retryAfterSeconds));
   return response;
 }
