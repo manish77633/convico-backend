@@ -1,0 +1,22 @@
+import { GoogleGenAI } from '@google/genai';
+import { config } from './config';
+import { error } from './api';
+import { tripProviderQuota } from './limits';
+
+export type Content = {role:'user'|'model';parts:({text:string}|{inlineData:{mimeType:string;data:string}})[]};
+export async function generate(contents: Content[]) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return error('AI_SERVICE_UNAVAILABLE',503);
+  try {
+    const ai = new GoogleGenAI({apiKey:key});
+    const response = await ai.models.generateContent({model:config().model, contents, config:{systemInstruction:'Reply helpfully and concisely in the user’s language.',maxOutputTokens:1024,temperature:0.7},});
+    const reply = response.text?.trim();
+    if (!reply) return error('AI_SERVICE_UNAVAILABLE',502);
+    return Response.json({reply});
+  } catch (cause) {
+    const e = cause as {status?:number;message?:string};
+    if (e.status === 429 || /quota|resource.exhausted/i.test(e.message || '')) { await tripProviderQuota(); return error('PROVIDER_QUOTA_EXCEEDED',429); }
+    if (/timeout|abort/i.test(e.message || '')) return error('REQUEST_TIMEOUT',504);
+    return error('AI_SERVICE_UNAVAILABLE',502);
+  }
+}
