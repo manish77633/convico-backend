@@ -30,6 +30,7 @@ export async function POST(request:NextRequest) {
     if(await providerQuotaTripped('tts'))return error('PROVIDER_QUOTA_EXCEEDED',429);
     const slot=await reserve(request,requestId);
     if(slot.code===1)return error('RATE_LIMITED',429,slot.retryAfterSeconds);
+    if(slot.code===2)return error('APP_USAGE_LIMIT_REACHED',429,slot.retryAfterSeconds);
     if(slot.code===3)return error('RATE_LIMITED',409);
     hash=slot.hash;
     const key=process.env.GEMINI_API_KEY;
@@ -41,6 +42,7 @@ export async function POST(request:NextRequest) {
     const pcm=Buffer.from(data,'base64');
     if(!pcm.length||pcm.length>4_000_000||pcm.length%2)return error('AI_SERVICE_UNAVAILABLE',502);
     const audio=wav(pcm);
+    console.info('Gemini TTS completed',{status:200,outputTokens:response.usageMetadata?.candidatesTokenCount??null});
     return new Response(new Uint8Array(audio),{headers:{'Content-Type':'audio/wav','Content-Length':String(audio.length),'Cache-Control':'no-store'}});
   }catch(cause){
     const e=cause as {status?:number;message?:string};

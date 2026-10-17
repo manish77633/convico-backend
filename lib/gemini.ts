@@ -21,6 +21,7 @@ export async function generate(contents: Content[], voiceReply=false) {
       return failure;
     }
     if (voiceReply && reply.length>600) return error('AI_SERVICE_UNAVAILABLE',502);
+    console.info('Gemini generation completed',{status:200,kind:voiceReply?'voice':'chat',outputTokens:response.usageMetadata?.candidatesTokenCount??null,thoughtTokens:response.usageMetadata?.thoughtsTokenCount??null});
     return Response.json({reply});
   } catch (cause) {
     const e = cause as {status?:number;message?:string};

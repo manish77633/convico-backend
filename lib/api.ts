@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { config } from './config';
 
-export type ApiCode = 'RATE_LIMITED'|'PROVIDER_QUOTA_EXCEEDED'|'MESSAGE_TOO_LONG'|'AUDIO_TOO_LARGE'|'REQUEST_TIMEOUT'|'AI_SERVICE_UNAVAILABLE'|'AI_ACCESS_DENIED'|'AI_MODEL_UNAVAILABLE'|'AI_RESPONSE_BLOCKED'|'AI_EMPTY_RESPONSE'|'AI_RESPONSE_INCOMPLETE'|'INVALID_REQUEST';
+export type ApiCode = 'RATE_LIMITED'|'APP_USAGE_LIMIT_REACHED'|'PROVIDER_QUOTA_EXCEEDED'|'MESSAGE_TOO_LONG'|'AUDIO_TOO_LARGE'|'REQUEST_TIMEOUT'|'AI_SERVICE_UNAVAILABLE'|'AI_ACCESS_DENIED'|'AI_MODEL_UNAVAILABLE'|'AI_RESPONSE_BLOCKED'|'AI_EMPTY_RESPONSE'|'AI_RESPONSE_INCOMPLETE'|'INVALID_REQUEST';
 const messages: Record<ApiCode, string> = {
   RATE_LIMITED: "Too many AI requests from this connection. Please retry after the indicated delay.",
+  APP_USAGE_LIMIT_REACHED: 'The app has reached its daily AI budget. Please try again after the indicated delay.',
   PROVIDER_QUOTA_EXCEEDED: 'AI usage limit reached. Please try again when your quota is available.',
   MESSAGE_TOO_LONG: 'Message is too long.', AUDIO_TOO_LARGE: 'Audio recording is too large.',
   REQUEST_TIMEOUT: 'AI took too long. Please retry when ready.',
@@ -16,11 +17,13 @@ const messages: Record<ApiCode, string> = {
   INVALID_REQUEST: 'Please check your message and try again.',
 };
 export function error(code: ApiCode, status: number, retryAfterSeconds?: number) {
+  console.warn('API request rejected',{code,status});
   const response = NextResponse.json({error: {code, message: messages[code], ...(retryAfterSeconds ? {retryAfterSeconds} : {})}}, {status});
-  response.headers.set('X-Convico-Diagnostics','v4');
+  response.headers.set('X-Convico-Diagnostics','v5');
   const limits = config();
   response.headers.set('X-RateLimit-Limit', String(limits.perIp));
   response.headers.set('X-RateLimit-Window', String(limits.windowSeconds));
+  response.headers.set('X-Convico-Daily-Limit', String(limits.daily));
   if (retryAfterSeconds) response.headers.set('Retry-After', String(retryAfterSeconds));
   return response;
 }
